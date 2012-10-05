@@ -1,5 +1,5 @@
 Template = require('./templates/home')
-TweetsView = require('./tweets_view')
+#TweetsView = require('./tweets_view')
 
 module.exports = class HomeView extends Backbone.View
   id: 'home-view'
@@ -19,8 +19,8 @@ module.exports = class HomeView extends Backbone.View
     @$el.html Template()
 
     # Add Tweets Subview
-    new TweetsView(
-      collection: @collection
-      el: @$('.tweets')
-    ).render()
+    #new TweetsView(
+      #collection: @collection
+      #el: @$('.tweets')
+    #).render()
     @
