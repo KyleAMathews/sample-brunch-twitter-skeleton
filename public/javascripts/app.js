@@ -84,10 +84,12 @@ window.require.define({"application": function(exports, require, module) {
       var HomeView, Router;
       HomeView = require('views/home_view');
       Router = require('lib/router');
-      this.homeView = new HomeView();
+      this.collections = {};
+      this.collections.tweets = new TweetsCollection;
+      this.homeView = new HomeView({
+        collection: this.collections.tweets
+      });
       this.router = new Router();
-      this.collection = {};
-      this.collection.tweets = new TweetsCollection;
       if (typeof Object.freeze === 'function') {
         return Object.freeze(this);
       }
@@ -125,18 +127,6 @@ window.require.define({"lib/router": function(exports, require, module) {
   
 }});
 
-window.require.define({"models/collection": function(exports, require, module) {
-  
-  module.exports = Backbone.Collection.extend({});
-  
-}});
-
-window.require.define({"models/model": function(exports, require, module) {
-  
-  module.exports = Backbone.Model.extend({});
-  
-}});
-
 window.require.define({"models/tweets": function(exports, require, module) {
   var Tweet, TweetsCollection,
     __hasProp = {}.hasOwnProperty,
@@ -171,7 +161,7 @@ window.require.define({"models/tweets": function(exports, require, module) {
     TweetsCollection.prototype.fetch = function(options) {
       var _this = this;
       return $.ajax({
-        url: "http://search.twitter.com/search.json?&q=hello&rpp=25&callback=",
+        url: this.url(),
         data: {
           rpp: this.queryPageSize,
           q: this.get('query')
@@ -219,16 +209,52 @@ window.require.define({"models/tweets": function(exports, require, module) {
 }});
 
 window.require.define({"views/home_view": function(exports, require, module) {
-  var View, template;
+  var HomeView, Template, TweetsView,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-  View = require('./view');
+  Template = require('./templates/home');
 
-  template = require('./templates/home');
+  TweetsView = require('./tweets_view');
 
-  module.exports = View.extend({
-    id: 'home-view',
-    template: template
-  });
+  module.exports = HomeView = (function(_super) {
+
+    __extends(HomeView, _super);
+
+    function HomeView() {
+      return HomeView.__super__.constructor.apply(this, arguments);
+    }
+
+    HomeView.prototype.id = 'home-view';
+
+    HomeView.prototype.events = {
+      'click button': 'clickButton',
+      'keypress input': 'typeInput'
+    };
+
+    HomeView.prototype.typeInput = function(e) {
+      if (e.which === 13) {
+        return this.clickButton();
+      }
+    };
+
+    HomeView.prototype.clickButton = function() {
+      app.collections.tweets.query = this.$('input.query').val();
+      return app.collections.tweets.fetch();
+    };
+
+    HomeView.prototype.render = function() {
+      this.$el.html(Template());
+      new TweetsView({
+        collection: this.collection,
+        el: this.$('.tweets')
+      }).render();
+      return this;
+    };
+
+    return HomeView;
+
+  })(Backbone.View);
   
 }});
 
@@ -238,7 +264,7 @@ window.require.define({"views/templates/home": function(exports, require, module
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="content"><h1>Brunch<img src="http://brunch.io/images/brunch.png"/></h1><h2>Welcome!</h2><ul><li><a href="http://brunch.readthedocs.org/">Documentation</a></li><li><a href="https://github.com/brunch/brunch/issues">Github Issues</a></li><li><a href="https://github.com/brunch/twitter">Twitter Example App</a></li><li><a href="https://github.com/brunch/todos">Todos Example App</a></li></ul></div>');
+  buf.push('<div id="content"><h2>Twitter Search!</h2><input type="text" class="query"/><button>Search</button><div class="tweets"></div></div>');
   }
   return buf.join("");
   };
@@ -271,21 +297,57 @@ window.require.define({"views/templates/layout": function(exports, require, modu
   };
 }});
 
-window.require.define({"views/view": function(exports, require, module) {
-  
-  module.exports = Backbone.View.extend({
-    initialize: function() {
-      return this.render = _.bind(this.render, this);
-    },
-    template: function() {},
-    getRenderData: function() {},
-    render: function() {
-      this.$el.html(this.template(this.getRenderData()));
-      this.afterRender();
+window.require.define({"views/templates/tweets": function(exports, require, module) {
+  module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+  attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
+  var buf = [];
+  with (locals || {}) {
+  var interp;
+  buf.push('<div id="tweets"></div>');
+  }
+  return buf.join("");
+  };
+}});
+
+window.require.define({"views/tweets_view": function(exports, require, module) {
+  var Template, TweetsView,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Template = require('./templates/tweets');
+
+  module.exports = TweetsView = (function(_super) {
+
+    __extends(TweetsView, _super);
+
+    function TweetsView() {
+      this.render = __bind(this.render, this);
+      return TweetsView.__super__.constructor.apply(this, arguments);
+    }
+
+    TweetsView.prototype.id = 'tweets';
+
+    TweetsView.prototype.initialize = function() {
+      return this.collection.on('change', this.render);
+    };
+
+    TweetsView.prototype.render = function() {
+      var tweet, _i, _len, _ref;
+      this.$el.empty();
+      this.$el.append("<br /><ul>");
+      _ref = this.collection.models;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        tweet = _ref[_i];
+        this.$el.append("<li><img src='" + (tweet.get('profileImageUrl')) + "' />  <strong>" + (tweet.get('user')) + ":</strong>  " + (tweet.get('text')) + "</li>");
+      }
+      this.$el.append("</ul>");
       return this;
-    },
-    afterRender: function() {}
-  });
+    };
+
+    return TweetsView;
+
+  })(Backbone.View);
   
 }});
 

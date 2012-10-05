@@ -3,10 +3,10 @@ TweetsCollection = require 'models/tweets'
 Application = initialize: ->
   HomeView = require('views/home_view')
   Router = require('lib/router')
-  @homeView = new HomeView()
+  @collections = {}
+  @collections.tweets = new TweetsCollection
+  @homeView = new HomeView( collection: @collections.tweets )
   @router = new Router()
-  @collection = {}
-  @collection.tweets = new TweetsCollection
   Object.freeze this if typeof Object.freeze is 'function'
 
 module.exports = Application

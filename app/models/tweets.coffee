@@ -8,7 +8,7 @@ module.exports = class TweetsCollection extends Backbone.Collection
 
   fetch: (options) ->
     $.ajax(
-      url: "http://search.twitter.com/search.json?&q=hello&rpp=25&callback="
+      url: @url()
       data:
         rpp: @queryPageSize,
         q: @get('query')
